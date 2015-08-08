@@ -1,0 +1,115 @@
+
+Public Enum PokerHands
+{
+IsHighCard
+IsOnePair
+IsTwoPair
+IsThreeOfAKind
+IsFullHouse
+IsStraight
+IsStraightFlush
+}
+Public Enum CardSuit
+{
+    Hearts,
+    Diamonds,
+    Clubs,
+    Spades
+}
+Public Enum PlayingCardNominalValue
+{
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+    Ace
+}
+Public Class PlayingCard
+{
+    Public CardSuit Suit { Get; Private Set; }
+    Public PlayingCardNominalValue NominalValue { Get; Private Set; }
+
+    Public PlayingCard(CardSuit suit, PlayingCardNominalValue nominalValue)
+    {
+        Suit = suit;
+        NominalValue = nominalValue;
+    }
+}
+Public Class PokerGame
+{
+    Private ReadOnly IDictionary<PokerHands, Func<IEnumerable<PlayingCard>, bool>> _rules;
+    Public IDictionary<PokerHands, Func<IEnumerable<PlayingCard>, bool>> Rules { Get { Return _rules; } }
+
+    Public PokerGame()
+    {
+        // overly verbose for readability
+
+        Func<IEnumerable<PlayingCard>, bool> hasPair = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Count(group >= group.Count() == 2) == 1;
+
+        Func<IEnumerable<PlayingCard>, bool> isPair = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Count(group >= group.Count() == 3) == 0
+                                       && hasPair(cards);
+
+        Func<IEnumerable<PlayingCard>, bool> isTwoPair = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Count(group >= group.Count() >= 2) == 2;
+
+        Func<IEnumerable<PlayingCard>, bool> isStraight = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Count() == cards.Count()
+                                       && cards.Max(card => (int) card.NominalValue) 
+                                        - cards.Min(card => (int) card.NominalValue) == 4;
+
+        Func<IEnumerable<PlayingCard>, bool> hasThreeOfKind = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Any(group >= group.Count() == 3);
+
+        Func<IEnumerable<PlayingCard>, bool> isThreeOfKind = 
+                              cards => hasThreeOfKind(cards) && !hasPair(cards);
+
+        Func<IEnumerable<PlayingCard>, bool> isFlush = 
+                              cards => cards.GroupBy(card => card.Suit).Count() == 1;
+
+        Func<IEnumerable<PlayingCard>, bool> isFourOfKind = 
+                              cards => cards.GroupBy(card => card.NominalValue)
+                                            .Any(group >= group.Count() == 4);
+
+        Func<IEnumerable<PlayingCard>, bool> isFullHouse = 
+                              cards => hasPair(cards) && hasThreeOfKind(cards);
+
+        Func<IEnumerable<PlayingCard>, bool> hasStraightFlush = 
+                              cards =>isFlush(cards) && isStraight(cards);
+
+        Func<IEnumerable<PlayingCard>, bool> isRoyalFlush = 
+                              cards => cards.Min(card => (int)card.NominalValue) == (int)PlayingCardNominalValue.Ten
+                                       && hasStraightFlush(cards);
+
+        Func<IEnumerable<PlayingCard>, bool> isStraightFlush = 
+                              cards => hasStraightFlush(cards) && !isRoyalFlush(cards);
+
+
+        _rules = New Dictionary<PokerHands, Func<IEnumerable<PlayingCard>, bool>>
+                     {
+                         { PokerHands.Pair, isPair },
+                         { PokerHands.TwoPair, isTwoPair },
+                         { PokerHands.ThreeOfKind, isThreeOfKind },
+                         { PokerHands.Straight, isStraight },
+                         { PokerHands.Flush, isFlush },
+                         { PokerHands.FullHouse, isFullHouse },
+                         { PokerHands.FourOfKind, isFourOfKind },
+                         { PokerHands.StraightFlush, isStraightFlush },
+                         { PokerHands.RoyalFlush, isRoyalFlush }
+                     };
+    }
+}
